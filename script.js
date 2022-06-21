@@ -1,7 +1,6 @@
 window.onload = getApi;
 const BASE_URL = "https://swapi.dev/api/";
 let collectionData = null;
-// let fullCollection = null;
 
 //CLASSES
 
@@ -13,7 +12,6 @@ class People {
     this.Birth_Year = Birth_Year;
     this.Gender = Gender;
     this.Created = Created.slice(0, 10);
-    // this.Delete = Delete;
   }
 }
 class Planets {
@@ -89,20 +87,12 @@ class Starships {
 }
 
 // CREATE TABLE
-async function createTable(table, arrOfKeys, collection) {
+function createTable(table, arrOfKeys, collection) {
   const tableHead = table.querySelector("thead");
   const tableBody = table.querySelector("tbody");
   const resultBar = document.getElementById("result-bar");
   tableHead.innerHTML = "<tr></tr>";
   tableBody.innerHTML = "";
-  const selectNumberOfPages = document.getElementById("select-number-of-pages");
-  // let valueOfSelectedNumberOfPages = selectNumberOfPages.value;
-  // console.log(valueOfSelectedNumberOfPages);
-
-  // function pagination(valueOfSelectedNumberOfPages) {
-  //   if (valueOfSelectedNumberOfPages == 5) {
-  //   }
-  // }
 
   function removeClik() {
     const result = confirm("Are you sure?");
@@ -146,34 +136,33 @@ async function createTable(table, arrOfKeys, collection) {
     dumpsterIcon.onclick = removeClik;
     const detailsIcon = document.createElement("i");
     detailsIcon.setAttribute("class", "fa-solid fa-plus");
-    // detailsButton.textContent = "Details";
+
     removeDetailsDiv.appendChild(detailsIcon);
     tableBody.appendChild(rowElement);
   }
 
-  resultBar.innerHTML = `Result: ${collection.length}`;
+  resultBar.innerHTML = `Result: ${tableBody.rows.length}`;
 }
 
 // COLLECTION API FETCH WITH RETURNED CLASS
 let fullCollection = [];
 async function fetchCollection(endpoint) {
-  // let fullCollection = [];
+  fullCollection = [];
   const response = await fetch(`${BASE_URL}${endpoint}`);
   collectionData = await response.json();
   fullCollection.push(...collectionData.results);
 
-  async function nextPageOfCollection(nextPage) {
-    if (collectionData.next === null) return;
-    const response = await fetch(collectionData.next);
-    collectionData = await response.json();
-    fullCollection.push(...collectionData.results);
-    await nextPageOfCollection(collectionData.next);
+  if (collectionData.next != null) {
+    let url = `${collectionData.next}`;
+    while (url) {
+      const response = await fetch(url);
+      const collectionData = await response.json();
+      fullCollection.push(...collectionData.results);
+      url = collectionData.next;
+    }
   }
-  nextPageOfCollection(collectionData.next);
 
   return fullCollection;
-  // console.log(fullCollection);
-  // console.log(collectionData);
 }
 
 // FULL API FETCH
@@ -188,13 +177,7 @@ async function getApi() {
   const fetchClick = async (event) => {
     const table = document.querySelector("table");
     const endpoint = event.target.innerHTML.toLowerCase();
-    const allFetchResults = await fetchCollection(endpoint);
-
-    console.log(allFetchResults);
-    console.log(fullCollection);
-    console.log(fullCollection[24]);
-    // console.log(collectionData.results);
-    // console.log(collectionData);
+    await fetchCollection(endpoint);
 
     function getKeys(mappedCollection) {
       return Object.keys(mappedCollection[0]);
@@ -208,16 +191,12 @@ async function getApi() {
         }
       );
 
-      console.log(collectionMapPeople[22]);
+      console.log(collectionMapPeople);
 
-      await createTable(
-        table,
-        getKeys(collectionMapPeople),
-        collectionMapPeople
-      );
+      createTable(table, getKeys(collectionMapPeople), collectionMapPeople);
     } else if (endpoint === "planets") {
       //PLANETS
-      const collectionMapPlanets = collectionData.results.map(
+      const collectionMapPlanets = fullCollection.map(
         ({ name, climate, gravity, terrain, population, created }) => {
           return new Planets(
             name,
@@ -229,15 +208,11 @@ async function getApi() {
           );
         }
       );
-      await createTable(
-        table,
-        getKeys(collectionMapPlanets),
-        collectionMapPlanets
-      );
+      createTable(table, getKeys(collectionMapPlanets), collectionMapPlanets);
       console.log(collectionMapPlanets);
     } else if (endpoint === "films") {
       //FILMS
-      const collectionMapFilms = collectionData.results.map(
+      const collectionMapFilms = fullCollection.map(
         ({ title, director, producer, release_date, episode_id, created }) => {
           return new Films(
             title,
@@ -250,10 +225,10 @@ async function getApi() {
         }
       );
       console.log(collectionMapFilms);
-      await createTable(table, getKeys(collectionMapFilms), collectionMapFilms);
+      createTable(table, getKeys(collectionMapFilms), collectionMapFilms);
     } else if (endpoint === "species") {
       //SPECIES
-      const collectionMapSpecies = collectionData.results.map(
+      const collectionMapSpecies = fullCollection.map(
         ({
           name,
           classification,
@@ -273,14 +248,10 @@ async function getApi() {
         }
       );
       console.log(collectionMapSpecies);
-      await createTable(
-        table,
-        getKeys(collectionMapSpecies),
-        collectionMapSpecies
-      );
+      createTable(table, getKeys(collectionMapSpecies), collectionMapSpecies);
     } else if (endpoint === "vehicles") {
       //VEHICLES
-      const collectionMapVehicles = collectionData.results.map(
+      const collectionMapVehicles = fullCollection.map(
         ({
           name,
           model,
@@ -300,14 +271,10 @@ async function getApi() {
         }
       );
       console.log(collectionMapVehicles);
-      await createTable(
-        table,
-        getKeys(collectionMapVehicles),
-        collectionMapVehicles
-      );
+      createTable(table, getKeys(collectionMapVehicles), collectionMapVehicles);
     } else if (endpoint === "starships") {
       //STARSHIPS
-      const collectionMapStarships = collectionData.results.map(
+      const collectionMapStarships = fullCollection.map(
         ({
           name,
           model,
@@ -327,7 +294,7 @@ async function getApi() {
         }
       );
       console.log(collectionMapStarships);
-      await createTable(
+      createTable(
         table,
         getKeys(collectionMapStarships),
         collectionMapStarships
@@ -352,15 +319,40 @@ async function getApi() {
   resultBar.setAttribute("id", "result-bar");
   resultBar.innerHTML = "Result:";
   const searchInput = document.createElement("input");
+  searchInput.setAttribute("id", "search-input");
+  searchInput.setAttribute("placeholder", "Search...");
   resultSearch.appendChild(resultBar);
   resultSearch.appendChild(searchInput);
 
+  // SEARCH FUNCTION
+  function searchValue() {
+    let input = document.getElementById("search-input");
+    let filter = input.value.toUpperCase();
+    let table = document.querySelector("table");
+    let tr = table.getElementsByTagName("tr");
+    for (i = 0; i < tr.length; i++) {
+      let td = tr[i].getElementsByTagName("td")[1];
+      if (td) {
+        let textValue = td.textContent;
+        if (textValue.toUpperCase().indexOf(filter) > -1) {
+          tr[i].style.display = "";
+        } else {
+          tr[i].style.display = "none";
+        }
+      }
+    }
+  }
+  let input = document.getElementById("search-input");
+  input.onkeyup = searchValue;
+
   // PAGINATION
   const pagination = document.getElementById("pagination");
-  const prevButton = document.createElement("button");
-  prevButton.innerHTML = "PREV";
-  const nextButton = document.createElement("button");
-  nextButton.innerHTML = "NEXT";
+  const prevButton = document.createElement("i");
+  prevButton.setAttribute("id", "prev-button");
+  prevButton.setAttribute("class", "fa-solid fa-angle-left");
+  const nextButton = document.createElement("i");
+  nextButton.setAttribute("id", "next-button");
+  nextButton.setAttribute("class", "fa-solid fa-angle-right");
   const numbersOfPages = document.createElement("span");
   numbersOfPages.innerHTML = "1 of 10";
   const selectPages = document.createElement("select");
@@ -369,6 +361,7 @@ async function getApi() {
   pagesOption5.innerHTML = "5";
   const pagesOption10 = document.createElement("option");
   pagesOption10.innerHTML = "10";
+  pagesOption10.setAttribute("selected", "selected");
   const pagesOption15 = document.createElement("option");
   pagesOption15.innerHTML = "15";
   selectPages.appendChild(pagesOption5);
@@ -379,4 +372,21 @@ async function getApi() {
   pagination.appendChild(nextButton);
   pagination.appendChild(numbersOfPages);
   pagination.appendChild(selectPages);
+
+  //PAGINATION FUNCTION
+
+  // function paginationFunction() {
+  //   const selectNumberOfPages = document.getElementById(
+  //     "select-number-of-pages"
+  //   );
+  //   const prevButton = document.getElementById("prev-button");
+  //   const nextButton = document.getElementById("next-button");
+  //   let valueOfSelectPages = selectNumberOfPages.value;
+  //   let table = document.querySelector("table");
+  //   let tr = table.getElementsByTagName("tr");
+  //   if (valueOfSelectPages == 10) {
+  //     table.slice(0, 10);
+  //   }
+  // }
+  // paginationFunction();
 }
